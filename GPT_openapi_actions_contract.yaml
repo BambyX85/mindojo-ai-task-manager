@@ -1,0 +1,125 @@
+openapi: 3.1.0
+info:
+  title: Task Manager API
+  description: Minimal API for managing tasks in Google Sheets.
+  version: 1.0.0
+servers:
+  - url: https://script.google.com/macros/s/AKfycbztzuEtNL77PbgvRaapo9dxdp8ewic6fOoehzT8r2hHTM5g0ehAR-LLK8GlKSM52EWYdw/exec
+paths:
+  /:
+    get:
+      operationId: getTasks
+      summary: Retrieve tasks. Use 'view=next' for the single most urgent task.
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - active
+              - completed
+              - snoozed
+            default: active
+          description: Filter by task status.
+        - name: view
+          in: query
+          schema:
+            type: string
+            enum:
+              - next
+              - all
+            default: all
+          description: next returns only the single highest priority task. all returns the list.
+      responses:
+        "200":
+          description: JSON object containing data array and meta info.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskResponse"
+    post:
+      operationId: mutateTask
+      summary: Create or Update a task.
+      parameters:
+        - name: action
+          in: query
+          required: true
+          schema:
+            type: string
+            enum:
+              - create
+              - update
+          description: create makes a new row. update requires an ID in the body.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskPayload"
+      responses:
+        "200":
+          description: Success response with updated state count.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskResponse"
+components:
+  schemas:
+    TaskPayload:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Required only for action=update.
+        description:
+          type: string
+          description: The task title.
+        status:
+          type: string
+          enum:
+            - active
+            - completed
+            - snoozed
+        due_date:
+          type: string
+          format: date
+          description: ISO 8601 format (YYYY-MM-DD). Calculated by GPT relative to user time.
+    TaskResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Task"
+        meta:
+          $ref: "#/components/schemas/Meta"
+        error:
+          type: string
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum:
+            - active
+            - completed
+            - snoozed
+        due_date:
+          type: string
+        created:
+          type: string
+        updated:
+          type: string
+    Meta:
+      type: object
+      properties:
+        active_count:
+          type: integer
+        server_time:
+          type: string
+        human_message:
+          type: string
